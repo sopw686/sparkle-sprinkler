@@ -1,0 +1,350 @@
+/* v1 — matches mockups/sparkle sprinkler mock up.jpg (a 960×540 slide).
+   Every size is N × --u, where 1u is one mockup pixel scaled to the viewport width. */
+
+:root {
+  --pink: #ff28bb;
+  --blue: #0000ff;
+  --sky: #c9daf8;
+  --hover: #b7b7b7;
+  --u: clamp(1px, 100vw / 960, 1.75px);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100vh;
+  background: var(--pink);
+  color: var(--blue);
+  font-family: var(--sprinkle-font-stack, serif);
+  font-size: calc(18 * var(--u));
+  line-height: 1.3;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: 1fr calc(485 * var(--u)) 1fr;
+  grid-template-areas:
+    "head head head"
+    "left main right";
+  max-width: calc(960 * var(--u));
+  margin: 0 auto;
+  padding-bottom: calc(28 * var(--u));
+}
+
+/* ---------- header */
+
+.masthead {
+  grid-area: head;
+  text-align: center;
+  padding: calc(16 * var(--u)) calc(110 * var(--u)) 0;
+}
+
+h1 {
+  margin: 0;
+  font-weight: 400;
+  font-size: calc(36 * var(--u));
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+h1 .deco {
+  font-size: 0.62em;
+  vertical-align: 0.18em;
+}
+
+.intro {
+  margin: calc(10 * var(--u)) 0 0;
+  font-size: calc(15 * var(--u));
+  line-height: 1.3;
+}
+
+/* ---------- decorative side columns */
+
+.side {
+  padding-top: calc(10 * var(--u));
+  font-size: calc(14 * var(--u));
+  line-height: calc(22 * var(--u));
+  contain: size; /* never taller than the main column */
+  overflow: hidden;
+  user-select: none;
+}
+
+.side-left { grid-area: left; padding-left: calc(38 * var(--u)); padding-right: calc(8 * var(--u)); }
+.side-right { grid-area: right; padding-left: calc(35 * var(--u)); padding-right: calc(8 * var(--u)); }
+
+.side p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* ---------- main column */
+
+.machine {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: calc(14 * var(--u));
+}
+
+.controls {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: calc(184 * var(--u)) calc(215 * var(--u));
+  column-gap: calc(57 * var(--u));
+  padding-left: calc(20 * var(--u));
+}
+
+.control { display: flex; flex-direction: column; min-width: 0; }
+
+.label {
+  display: block;
+  font-size: calc(20 * var(--u));
+  line-height: calc(24 * var(--u));
+  margin: 0 0 calc(10 * var(--u)) calc(-4 * var(--u));
+}
+
+/* ---------- tone dropdown */
+
+.select { position: relative; }
+
+.select-field {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: calc(31 * var(--u));
+  padding: 0;
+  border: calc(2 * var(--u)) solid var(--blue);
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-size: calc(18 * var(--u));
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-value {
+  flex: 1;
+  min-width: 0;
+  padding: 0 calc(8 * var(--u));
+  align-self: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.select-arrow {
+  flex: none;
+  width: calc(32 * var(--u));
+  border-left: calc(2 * var(--u)) solid var(--blue);
+  background: var(--sky);
+  position: relative;
+}
+
+.select-arrow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(19 * var(--u));
+  height: calc(17 * var(--u));
+  transform: translate(-50%, -50%);
+  background: var(--blue);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.select-field:focus-visible,
+.copy:focus-visible,
+.dial:focus-visible {
+  outline: calc(2 * var(--u)) dashed var(--blue);
+  outline-offset: calc(3 * var(--u));
+}
+
+.select-list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% - 2 * var(--u));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: calc(2 * var(--u)) 0 calc(4 * var(--u));
+  list-style: none;
+  border: calc(2 * var(--u)) solid var(--blue);
+  background: #fff;
+  max-height: calc(260 * var(--u));
+  overflow-y: auto;
+  outline: none;
+}
+
+.select-list[hidden] { display: none; }
+
+.select-list li {
+  position: relative;
+  padding: 0 calc(8 * var(--u)) 0 calc(26 * var(--u));
+  font-size: calc(18 * var(--u));
+  line-height: calc(25 * var(--u));
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.select-list li[aria-selected="true"] { background: var(--sky); }
+
+.select-list li[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: calc(10 * var(--u));
+  top: calc(5 * var(--u));
+  width: calc(5 * var(--u));
+  height: calc(11 * var(--u));
+  border: solid var(--blue);
+  border-width: 0 calc(2 * var(--u)) calc(2 * var(--u)) 0;
+  transform: rotate(45deg);
+}
+
+.select-list li:hover,
+.select-list li.active { background: var(--hover); }
+
+/* ---------- cuteness dial */
+
+.dial {
+  --thumb: calc(38 * var(--u));
+  --p: 0.5;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: calc(23 * var(--u));
+  margin: calc(4 * var(--u)) 0 0;
+  border: calc(2 * var(--u)) solid var(--blue);
+  border-radius: 0;
+  background:
+    linear-gradient(var(--blue), var(--blue)) 0 0 /
+      calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--p)) 100% no-repeat,
+    transparent;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.dial::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.dial::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((23 * var(--u) - 4 * var(--u) - var(--thumb)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.dial::-moz-range-track { height: 100%; background: transparent; }
+.dial::-moz-range-progress { background: transparent; }
+
+.dial::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 0;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+/* ---------- writing box: square dotted border like the mockup */
+
+.paper {
+  --dot: calc(4 * var(--u));
+  --gap: calc(5.5 * var(--u));
+  width: 100%;
+  margin-top: calc(18 * var(--u));
+  padding: calc(4 * var(--u) + var(--dot));
+  background:
+    repeating-linear-gradient(90deg, var(--blue) 0 var(--dot), transparent 0 calc(var(--dot) + var(--gap))) top left / 100% var(--dot) no-repeat,
+    repeating-linear-gradient(90deg, var(--blue) 0 var(--dot), transparent 0 calc(var(--dot) + var(--gap))) bottom left / 100% var(--dot) no-repeat,
+    repeating-linear-gradient(180deg, var(--blue) 0 var(--dot), transparent 0 calc(var(--dot) + var(--gap))) top left / var(--dot) 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--blue) 0 var(--dot), transparent 0 calc(var(--dot) + var(--gap))) top right / var(--dot) 100% no-repeat;
+}
+
+.paper textarea {
+  display: block;
+  width: 100%;
+  height: calc(214 * var(--u));
+  min-height: calc(120 * var(--u));
+  margin: 0;
+  padding: calc(6 * var(--u)) calc(8 * var(--u));
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-size: calc(18 * var(--u));
+  line-height: calc(23 * var(--u));
+  resize: vertical;
+  outline: none;
+}
+
+.paper:focus-within { background-color: rgba(255, 255, 255, 0.08); }
+
+.paper textarea::placeholder { color: var(--blue); opacity: 0.55; }
+
+.paper textarea::selection { background: var(--blue); color: var(--pink); }
+
+/* ---------- copy */
+
+.actions {
+  position: relative;
+  margin-top: calc(14 * var(--u));
+  display: flex;
+  justify-content: center;
+}
+
+.copy {
+  min-width: calc(108 * var(--u));
+  height: calc(40 * var(--u));
+  padding: 0 calc(16 * var(--u));
+  border: calc(2 * var(--u)) solid var(--blue);
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-size: calc(24 * var(--u));
+  line-height: 1;
+  cursor: pointer;
+}
+
+.copy:hover { background: var(--sky); }
+.copy:active { background: var(--blue); color: var(--pink); }
+
+.status {
+  position: absolute;
+  left: calc(50% + 66 * var(--u));
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: calc(16 * var(--u));
+  white-space: nowrap;
+}
+
+/* ---------- narrow screens: one column, no side decoration */
+
+@media (max-width: 959px) {
+  :root { --u: 1px; }
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "main";
+    max-width: 560px;
+    padding: 0 16px 28px;
+  }
+  .masthead { padding: 16px 0 0; }
+  h1 { white-space: normal; font-size: 32px; line-height: 1.3; }
+  .side { display: none; }
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 16px;
+    padding-left: 0;
+  }
+  .label { margin-left: 0; }
+  .paper textarea { height: 260px; }
+}
