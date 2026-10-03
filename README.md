@@ -16,6 +16,8 @@ Then open http://localhost:8000/v1/. Opening the files directly (`file://`) won'
 | Path | What |
 | --- | --- |
 | `v1/` | Version 1 (matches `mockups/`). Self-contained: `index.html`, `style.css`, `app.js` (DOM), `sprinkle.js` (logic) |
+| `v2/` | Same as v1, black on white |
+| `v3/` | Same as v1, rainbow text on light pink |
 | `data/emoticons.csv` | Emoticon list, exported from Google Sheets as UTF-8 CSV |
 | `fonts/` | Self-hosted Noto + DejaVu Sans WOFF2s and the generated `fonts.css` / `manifest.json` |
 | `tools/` | Font build and coverage scripts |
