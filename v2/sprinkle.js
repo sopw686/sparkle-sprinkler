@@ -39,8 +39,9 @@ export function parseCSV(text) {
 }
 
 /**
- * Rows → [{ text, name, tags: string[] }]. The "Emoticons" column is the emoticon, "Name" is
- * optional, and every other column is a tag column. Duplicate emoticons are merged.
+ * Rows → [{ text, name, tags: string[] }]. The "Emoticons" column is the emoticon, "Name" and
+ * "Type" are optional bookkeeping, and every other column is a tag column (so only the emotion
+ * columns become tones). Duplicate emoticons are merged.
  */
 export function loadEmoticons(csvText) {
   const [header, ...rows] = parseCSV(csvText);
@@ -48,7 +49,8 @@ export function loadEmoticons(csvText) {
   const emoCol = cols.findIndex((c) => c === 'emoticons' || c === 'emoticon');
   if (emoCol < 0) throw new Error('CSV has no "Emoticons" column');
   const nameCol = cols.indexOf('name');
-  const tagCols = cols.map((_, i) => i).filter((i) => i !== emoCol && i !== nameCol);
+  const skip = new Set([emoCol, nameCol, cols.indexOf('type')]);
+  const tagCols = cols.map((_, i) => i).filter((i) => !skip.has(i));
 
   const byText = new Map();
   for (const r of rows) {

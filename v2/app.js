@@ -4,17 +4,22 @@ import {
 } from './sprinkle.js';
 
 // Chance that pressing space adds an emoticon, per cuteness level (slider position 1..length):
-// 1 in 6 at the low end up to 5 in 12 at the top, in even steps.
-const CUTENESS_CHANCES = [8 / 48, 11 / 48, 14 / 48, 17 / 48, 20 / 48];
+// 1 in 4 at the low end up to 5 in 12 at the top, in even steps.
+const CUTENESS_CHANCES = [6 / 24, 7 / 24, 8 / 24, 9 / 24, 10 / 24];
 const DEFAULT_LEVEL = 3;
 const RANDOM = 'random';
-const SIDE_LINES = 22;
+const SIDE_LINES_MIN = 5;
+const SIDE_LINES_MAX = 22;
 const INDENTS = [0, 0, 0, 1, 2, 3, 5];
+const FONTS = ['serif', 'Fontdiner Swanky', 'Mr Bedfort', 'Seaweed Script', 'Ribeye', 'Vibes', 'Press Start 2P', 'Sancreek'];
 
 const textarea = document.getElementById('writing');
 const dial = document.getElementById('cuteness');
 const copyButton = document.getElementById('copy');
 const statusEl = document.getElementById('status');
+const h1 = document.querySelector('h1');
+
+let currentFontIndex = 0;
 
 let emoticons = [];
 let index = makeIndex([]);
@@ -47,6 +52,14 @@ function currentPool() {
 
 function currentChance() {
   return CUTENESS_CHANCES[Number(dial.value) - 1] ?? CUTENESS_CHANCES[0];
+}
+
+function currentSideLines() {
+  const level = Number(dial.value);
+  const min = Number(dial.min);
+  const max = Number(dial.max);
+  const ratio = (level - min) / (max - min);
+  return Math.round(SIDE_LINES_MIN + (SIDE_LINES_MAX - SIDE_LINES_MIN) * ratio);
 }
 
 const rollForEmoticon = () => Math.random() < currentChance();
@@ -124,6 +137,9 @@ copyButton.addEventListener('click', async () => {
     textarea.setSelectionRange(selectionStart, selectionEnd);
     flash(ok ? 'Copied! ♡' : 'Copy failed');
   }
+  currentFontIndex = (currentFontIndex + 1) % FONTS.length;
+  h1.style.fontFamily = FONTS[currentFontIndex];
+  fillSides();
 });
 
 // ---------------------------------------------------------------- cuteness dial
@@ -136,7 +152,10 @@ function paintDial() {
   const n = Math.round(1 / currentChance());
   dial.setAttribute('aria-valuetext', `Level ${dial.value}: about one emoticon every ${n} words`);
 }
-dial.addEventListener('input', paintDial);
+dial.addEventListener('input', () => {
+  paintDial();
+  fillSides();
+});
 paintDial();
 
 // ---------------------------------------------------------------- tone select (multi-select listbox)
@@ -245,8 +264,9 @@ document.addEventListener('pointerdown', (e) => {
 /** Each column gets its own picks and its own ragged indents, so the two sides never mirror. */
 function fillSides() {
   const pool = currentPool();
+  const count = currentSideLines();
   for (const side of document.querySelectorAll('.side')) {
-    side.replaceChildren(...pickEmoticons(pool, SIDE_LINES).map((text) => {
+    side.replaceChildren(...pickEmoticons(pool, count).map((text) => {
       const p = document.createElement('p');
       p.textContent = text;
       p.style.paddingLeft = `${INDENTS[Math.floor(Math.random() * INDENTS.length)]}em`;

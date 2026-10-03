@@ -26,12 +26,12 @@ To start a new version, copy `v1/` to `v2/` and edit the copy. Only `data/` and 
 
 ## Tuning
 
-- **Cuteness**: `CUTENESS_CHANCES` at the top of `v1/app.js`. Slider level *i* gives each space a `CUTENESS_CHANCES[i-1]` chance of getting an emoticon — 1 in 6 at the bottom up to 5 in 12 at the top, in even steps. The length of the array sets the number of slider levels.
+- **Cuteness**: `CUTENESS_CHANCES` at the top of `v1/app.js`. Slider level *i* gives each space a `CUTENESS_CHANCES[i-1]` chance of getting an emoticon — 1 in 4 at the bottom up to 5 in 12 at the top, in even steps. The length of the array sets the number of slider levels.
 - **Side columns**: `SIDE_LINES` and `INDENTS` in `v1/app.js`. Each column is drawn independently from the selected tone's emoticons, and redrawn whenever the tone changes.
 
 ## Editing the emoticons
 
-In the CSV, the `Emoticons` column holds the emoticon and `Name` is optional. Every other column is treated as a tag column, so you can add a "Fourth tag" column and it just works. Tags show up in Tone Select automatically.
+In the CSV, the `Emoticons` column holds the emoticon; `Name` and `Type` are bookkeeping and are ignored by the app. Every other column is treated as a tag column, so you can add an "Emotion 3" column and it just works. Tags show up in Tone Select automatically.
 
 After changing the CSV, check that the fonts still cover every character:
 

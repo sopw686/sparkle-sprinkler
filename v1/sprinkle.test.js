@@ -23,9 +23,9 @@ test('parseCSV handles quotes, escaped quotes, commas, newlines, CRLF and BOM', 
   assert.deepEqual(rows, [['a', 'b'], ['x, "y"', 'z'], ['multi\nline', '']]);
 });
 
-test('loadEmoticons reads every non-name column as a tag column', () => {
-  const emos = loadEmoticons('Emoticons,Name,Emotion tag(s),Second tags,Fourth\n" (x,y) ",n,Face,happy,LOVE\n"(x,y)",dup,,sad,\n');
-  assert.deepEqual(emos, [{ text: '(x,y)', name: 'n', tags: ['face', 'happy', 'love', 'sad'] }]);
+test('loadEmoticons reads every column but Name and Type as a tag column', () => {
+  const emos = loadEmoticons('Emoticons,Name,Type,Emotion 1,Fourth\n" (x,y) ",n,Face,happy,LOVE\n"(x,y)",dup,face,sad,\n');
+  assert.deepEqual(emos, [{ text: '(x,y)', name: 'n', tags: ['happy', 'love', 'sad'] }]);
 });
 
 test('real CSV: quoted emoticons with commas survive, tags are found', () => {
@@ -33,7 +33,7 @@ test('real CSV: quoted emoticons with commas survive, tags are found', () => {
   assert.ok(texts.includes('ദ്ദി(｡•̀ ,<)~✩‧₊'));
   assert.ok(texts.includes('( ,,⩌\'︿\'⩌ꐦ,,)'));
   assert.ok(texts.includes('( •̀ ᴖ •́ )'), 'leading space trimmed');
-  assert.deepEqual(allTags(EMOS), ['happy', 'love', 'shy', 'sad', 'angry'], 'emotion tags only');
+  assert.deepEqual(allTags(EMOS), ['happy', 'shy', 'sad', 'love', 'angry'], 'emotion tags only');
   assert.equal(poolFor(EMOS, []).length, EMOS.length);
   assert.ok(poolFor(EMOS, ['sad', 'angry']).every((t) => EMOS.find((e) => e.text === t).tags.some((g) => g === 'sad' || g === 'angry')));
 });
