@@ -1,65 +1,87 @@
-Emoticons,Name,Emotion tag(s),Second tags
-⋆˚꩜｡,swirl,,
-˚˖𓍢ִ໋❀,flower,,
-⋆.˚˖࿔ ࣪,star_1,,
-⋆.ೃ࿔*:･,star_2,,
-⋆.˚⟡ ࣪ ˖,star_3,,
-𝄞⋆ ݁♪ .,music,,
-⋆˚✿˖°,star_flower,,
-*ੈ✩‧₊˚,star_4,,
-𓈒⟡₊⋆∘˚⊹ ࿔,star_5,,
-₊✩‧₊˚౨ৎ˚₊✩‧₊,star_bows,,
-°❀⋆.ೃ࿔*:･°❀⋆.ೃ࿔*:･,flower_2,,
-˚.⋆꒰১ ໒꒱⋆.˚,wings,,
-⚞^. .^⚟,cat,,
-♡⸜(˶˃ ᵕ ˂˶)⸝♡,give_hearts,happy,love
-(˶>⩊<˶),blush_1,happy,
-(✿ᴗ͈ˬᴗ͈)⁾⁾,flower_nod,happy,
-(づ˶•༝•˶)づ♡,give_hearts_2,happy,love
-<(˶ᵔᵕᵔ˶)>,smile,happy,
-ଘ(੭◌ˊᵕˋ)੭* ੈ♡‧₊˚,give_hearts_3,happy,love
-(*´▽`*)❀.,give_flower,happy,
-꒰ᐢ.   ̫ .ᐢ꒱,rabbit,happy,
-(*ᴗ͈ˬᴗ͈)ꕤ*.ﾟ,give_flower_2,happy,love
-( ˶ˆᗜˆ˵ ),smile_2,happy,
-"ദ്ദി(｡•̀ ,<)~✩‧₊",thumbsup,happy,
-( ⸝⸝´ ᵕ `⸝⸝),blush_2,happy,
-◝(ᵔᗜᵔ)◜,yay_1,happy,
-₍₍⚞(˶>ᗜ<˶)⚟⁾⁾,yay_2,happy,
-₍ᐢ.”⚇.”ᐢ₎,pig,happy,
-𐔌*ˊᵕˋ*𐦯,smile_3,happy,
-(╥ω╥),cry_1,sad,
-૮(˶ㅠ︿ㅠ)ა,cry_2,sad,
-(っ◞‸◟ c),frown_1,sad,
-(˃̣̣̥ᯅ˂̣̣̥),cry_3,sad,
-.·°՞(っ-ᯅ-ς)՞°·.,cry_4,sad,
-૮◞‸◟˶𑁬,frown_2,sad,
-૮꒰◞ ˕ ◟ ྀི꒱ა,frown_3,sad,
-(੭ ;´ ⌂ `;)੭♡,give_hearts_4,sad,
-(˚ ˃̣̣̥⌓˂̣̣̥ ),cry_5,sad,
-(ó﹏ò｡),scared,sad,
-TᴖT,annoyed,sad,
-(っ- ‸ - ς),flat,sad,
-"(,,>﹏<,,)",shy_2,shy,
-( ⸝⸝´ ᵕ `⸝⸝),smile_4,shy,
-(｡•́   ̫ •̀｡),blush_2,shy,
-(づ_ど),cover_up,shy,
-(˶˃⤙˂˶),blush_3,shy,
-(っᴗ͈ˬᴗ͈ ς),shy_3,shy,
-( 〃．．),surprise,shy,
-(ᵕ—ᴗ—),awkward,shy,
-(/ω＼),awkward_2,shy,
-(ｰ̀⤙ｰ́ ),bruh,angry,
-୧(๑•̀ᗝ•́)૭,angry_arms,angry,
- ( •̀ ᴖ •́ ),angry,angry,
-"( ,,⩌'︿'⩌ꐦ,,)",angry_2,angry,
-( ◺˰◿ ),angry_3,angry,
-٩(ˋᗣˊ*)و,angry_arms_2,angry,
-(｡•̀ ⤙ •́ ｡ꐦ) !!!,angry_4,angry,
-₍₍⚞(   ˃ ロ ˂)⚟⁾⁾,angry_arms_3,angry,
-<(˶`ロ´˶)> ,angry_arms_4,angry,
-ヽ(#`Д´)ﾉ,angry_arms_5,angry,
-(˶ ｰ̀ ⤙ｰ́ ˶) ,bruh_2,angry,
-૮꒰ •̯̀ ༝ •̯́˵꒱ა,angry_bunny,angry,
-(≖_≖ ),stare,angry,
-/ᐠ - ˕ -マ Ⳋ,angry_cat,angry,
+Emoticon,Name,Type,Emotion 1,Emotion 2
+⚞^. .^⚟,cat,face,happy,
+₍ᐢ."⚇."ᐢ₎,pig,face,happy,
+˚˖𓍢ִ໋❀,flower,sparkle,happy,shy
+⋆.˚⟡ ࣪ ˖,star,sparkle,happy,shy
+𝄞⋆ ݁♪ .,music,sparkle,happy,shy
+⋆˚✿˖°,star_flower,sparkle,happy,shy
+*ੈ✩‧₊˚,star_2,sparkle,happy,shy
+₊✩‧₊˚౨ৎ˚₊✩‧₊,bow,sparkle,happy,shy
+°❀⋆.ೃ࿔*:･°❀⋆.ೃ࿔*:･,flower_double,sparkle,happy,shy
+˚.⋆꒰१ ໒꒱⋆.˚,wings,sparkle,happy,shy
+⋆˚꩜｡,swirl,sparkle,happy,shy
+⊹ ࣪ ˖,stars,sparkle,happy,shy
+‎ . ݁⋆ ۶ৎ ݁˖ . ݁,bow_2,sparkle,happy,shy
+⋆˙⟡ ⋆.˚ ⊹₊⟡ ⋆,stars_2,sparkle,happy,shy
+ꕤ｡˚⋆,clover,sparkle,happy,shy
+༉‧₊˚.,sparkles,sparkle,happy,shy
+❀,flower_simple,sparkle,happy,shy
+°⋆. ࿔*:･,shine,sparkle,happy,shy
+ഒ·˚,wings_2,sparkle,happy,shy
+༘⋆,party,sparkle,happy,shy
+♡⸜(˶˃ ᵕ ˂˶)⸝♡,give_hearts,face,happy,love
+(˶>⩊<˶),blush,face,happy,
+(✿ᴗ͈ˬᴗ͈)⁾⁾,nod_happy,face,happy,
+(づ˶•༝•˶)づ♡,hug,face,happy,love
+<(˶ᵔᵕᵔ˶)>,smile_hug,face,happy,
+ଘ(੭◌ˊᵕˋ)੭* ੈ♡‧₊˚,reach_hearts,face,happy,love
+(*´▽`*)❀.,give_flower,face,happy,
+꒰ᐢ.   ̫ .ᐢ꒱,rabbit,face,happy,
+(*ᴗ͈ˬᴗ͈)ꕤ*.ﾟ,smile_stars,face,happy,
+( ˶ˆᗜˆ˵ ),smirk,face,happy,
+"ദ്ദി(｡•̀ ,<)~✩‧₊",thumbs_up,face,happy,
+( ⸝⸝´ ᵕ `⸝⸝),shy_smile,face,happy,shy
+◝(ᵔᗜᵔ)◜,yay,face,happy,
+₍₍⚞(˶>ᗜ<˶)⚟⁾⁾,cat_yay,face,happy,
+𐔌*ˊᵕˋ*𐦯,smile_sparkle,face,happy,
+(╥ω╥),cry,face,sad,
+૮(˶ㅠ︿ㅠ)ა,bunny_cry,face,sad,
+(っ◞‸◟ c),frown,face,sad,
+(˃̣̣̥ᯅ˂̣̣̥),sad_mouth,face,sad,
+.·°՞(っ-ᯅ-ς)՞°·.,decorated_frown,face,sad,
+૮◞‸◟˶𑁬,bunny_frown,face,sad,
+૮꒰◞ ˕ ◟ ྀི꒱ა,bunny_sad,face,sad,
+(੭ ;´ ⌂ `;)੭♡,sad_hug,face,sad,love
+(˚ ˃̣̣̥⌓˂̣̣̥ ),tearful,face,sad,
+(ó﹏ò｡),upset,face,sad,
+TᴖT,distressed,face,sad,
+(っ- ‸ - ς),resigned,face,sad,
+"(,,>﹏<,,)",muffled_sad,face,sad,shy
+( ⸝⸝´ ᵕ `⸝⸝),gentle_shy,face,shy,happy
+(｡•́   ̫ •̀｡),shy_look,face,shy,
+(づ_ど),hide,face,shy,
+(˶˃⤙˂˶),flustered,face,shy,
+(っᴗ͈ˬᴗ͈ ς),shy_smile_2,face,shy,happy
+( 〃．．),blank,face,shy,
+(ᵕ—ᴗ—),awkward,face,shy,
+(/ω＼),embarrassed,face,shy,
+(ｰ̀⤙ｰ́ ),unimpressed,face,angry,
+୧(๑•̀ᗝ•́)૭,fists_angry,face,angry,
+ ( •̀ ᴖ •́ ),stern,face,angry,
+"( ,,⩌'︿'⩌ꐦ,,)",furious,face,angry,
+( ◺˰◿ ),determined,face,angry,
+٩(ˋᗣˊ*)و,fists_determined,face,angry,
+(｡•̀ ⤙ •́ ｡ꐦ) !!!,fired_up,face,angry,
+₍₍⚞(   ˃ ロ ˂)⚟⁾⁾,cat_angry,face,angry,
+<(˶`ロ´˶)> ,strong_anger,face,angry,
+ヽ(#`Д´)ﾉ,flail_angry,face,angry,
+(˶ ｰ̀ ⤙ｰ́ ˶) ,unamused,face,angry,
+૮꒰ •̯̀ ༝ •̯́˵꒱ა,bunny_angry,face,angry,
+(≖_≖ ),glare,face,angry,
+/ᐠ - ˕ -マ Ⳋ,cat_glare,face,angry,
+⋆.˚ ☾⭒.˚,moon_sparkle,sparkle,sad,
+⋆.ೃ࿔*:･,star_3,sparkle,sad,
+𓈒⟡₊⋆∘˚⊹ ࿔,stars_3,sparkle,sad,
+✧˖°,shine_2,sparkle,sad,
+⋆˚꩜｡,swirl_2,sparkle,sad,
+⋆✴︎˚｡⋆˚࿔,stars_4,sparkle,sad,
+✮⋆˙,star_glimmer,sparkle,sad,
+.☘︎ ݁˖,clover_glow,sparkle,sad,
+࿐ ࿔*:･ﾟ,shine_3,sparkle,sad,
+⁺‧₊˚ ཐིཋྀ ˚₊‧⁺,hands_sparkle,sparkle,sad,
+₊˚⋆☪︎⋆˚₊,sacred_sparkle,sparkle,sad,
+✧˖°.☾,moon_star,sparkle,sad,
+๋࣭⭑,celestial,sparkle,sad,
+ೄྀ☾٭*~,moon_magic,sparkle,sad,
+✮⋆˙,star_glimmer_2,sparkle,sad,
+.𖥔 ݁ ˖,twilight_sparkle,sparkle,sad,
