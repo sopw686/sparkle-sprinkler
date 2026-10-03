@@ -189,7 +189,7 @@ h1 .deco {
   padding: 0 calc(8 * var(--u)) 0 calc(26 * var(--u));
   font-size: calc(18 * var(--u));
   line-height: calc(25 * var(--u));
-  text-transform: uppercase;
+
   cursor: pointer;
 }
 
@@ -224,7 +224,7 @@ h1 .deco {
   border-radius: 0;
   background:
     linear-gradient(var(--blue), var(--blue)) 0 0 /
-      calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--p)) 100% no-repeat,
+      calc(100% * var(--p)) 100% no-repeat,
     transparent;
   cursor: pointer;
   overflow: visible;
@@ -244,6 +244,7 @@ h1 .deco {
   border: 0;
   border-radius: 50%;
   background: var(--blue);
+  transform: translateX(calc((2 * var(--p) - 1) * var(--thumb) / 2));
 }
 
 .dial::-moz-range-track { height: 100%; background: transparent; }
@@ -255,6 +256,7 @@ h1 .deco {
   border: 0;
   border-radius: 50%;
   background: var(--blue);
+  transform: translateX(calc((2 * var(--p) - 1) * var(--thumb) / 2));
 }
 
 /* ---------- writing box: square dotted border like the mockup */
@@ -402,7 +404,7 @@ h1, .intro, .side p, .label, .select-value, .select-list li, .copy, .status, .pa
 .dial {
   background:
     linear-gradient(var(--pink), var(--pink)) 100% 0 /
-      calc(100% - var(--thumb) / 2 - (100% - var(--thumb)) * var(--p)) 100% no-repeat,
+      calc(100% * (1 - var(--p))) 100% no-repeat,
     var(--rainbow);
 }
 

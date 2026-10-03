@@ -1,14 +1,15 @@
 import {
   loadEmoticons, allTags, poolFor, makeIndex, pickEmoticons,
-  sentenceBeforeSpace, sentenceBeforeNewline, finalSentence, sentencesInRange,
-  sprinkleEdit, mergeEdits, mapPosition,
+  sprinkleAtSpace, spaceSlotsInRange, retoneEdit, mergeEdits, mapPosition,
 } from './sprinkle.js';
 
-// Emoticons added per sentence at each cuteness level (slider position 1..length).
-const CUTENESS_COUNTS = [1, 2, 3, 4, 5];
+// Chance that pressing space adds an emoticon, per cuteness level (slider position 1..length):
+// 1 in 6 at the low end up to 5 in 12 at the top, in even steps.
+const CUTENESS_CHANCES = [8 / 48, 11 / 48, 14 / 48, 17 / 48, 20 / 48];
 const DEFAULT_LEVEL = 3;
 const RANDOM = 'random';
 const SIDE_LINES = 22;
+const INDENTS = [0, 0, 0, 1, 2, 3, 5];
 
 const textarea = document.getElementById('writing');
 const dial = document.getElementById('cuteness');
@@ -44,17 +45,16 @@ function currentPool() {
   return poolFor(emoticons, selectedTags.includes(RANDOM) ? [] : selectedTags);
 }
 
-function currentCount() {
-  return CUTENESS_COUNTS[Number(dial.value) - 1] ?? 1;
+function currentChance() {
+  return CUTENESS_CHANCES[Number(dial.value) - 1] ?? CUTENESS_CHANCES[0];
 }
 
-function editFor(text, sentence) {
-  return sprinkleEdit(text, sentence, pickEmoticons(currentPool(), currentCount()), index);
-}
+const rollForEmoticon = () => Math.random() < currentChance();
 
 /** Replace [from, to) as one native undo step, then put the selection back where it belongs. */
 function applyToTextarea(edit) {
   if (!edit) return;
+  const previous = document.activeElement;
   const { selectionStart, selectionEnd, selectionDirection } = textarea;
   const scroll = textarea.scrollTop;
   busy = true;
@@ -70,6 +70,7 @@ function applyToTextarea(edit) {
   }
   textarea.setSelectionRange(mapPosition(selectionStart, edit), mapPosition(selectionEnd, edit), selectionDirection);
   textarea.scrollTop = scroll;
+  if (previous && previous !== textarea) previous.focus({ preventScroll: true });
 }
 
 textarea.addEventListener('beforeinput', (e) => {
@@ -86,16 +87,17 @@ textarea.addEventListener('input', (e) => {
   if (caret !== textarea.selectionEnd) return;
 
   let edit = null;
-  if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph'
-      || (e.inputType === 'insertText' && text[caret - 1] === '\n')) {
-    const s = sentenceBeforeNewline(text, caret - 1, index);
-    if (s) edit = editFor(text, s);
-  } else if (e.inputType === 'insertText' && /\s/.test(text[caret - 1] ?? '')) {
-    const s = sentenceBeforeSpace(text, caret - 1, index);
-    if (s) edit = editFor(text, s);
+  if (e.inputType === 'insertText' && text[caret - 1] === ' ') {
+    if (rollForEmoticon()) {
+      const [emo] = pickEmoticons(currentPool(), 1);
+      edit = sprinkleAtSpace(text, caret - 1, index, emo);
+    }
   } else if ((e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') && pasteStart !== null) {
-    const sentences = sentencesInRange(text, pasteStart, caret, index);
-    edit = mergeEdits(text, sentences.map((s) => editFor(text, s)));
+    const spots = spaceSlotsInRange(text, pasteStart, caret).filter(rollForEmoticon);
+    const picks = pickEmoticons(currentPool(), spots.length);
+    edit = mergeEdits(text, spots
+      .map((p, i) => sprinkleAtSpace(text, p, index, picks[i]))
+      .filter(Boolean));
   }
   pasteStart = null;
   applyToTextarea(edit);
@@ -111,8 +113,6 @@ function flash(message) {
 }
 
 copyButton.addEventListener('click', async () => {
-  const s = emoticons.length && finalSentence(textarea.value, index);
-  if (s) applyToTextarea(editFor(textarea.value, s));
   const text = textarea.value;
   try {
     await navigator.clipboard.writeText(text);
@@ -128,13 +128,13 @@ copyButton.addEventListener('click', async () => {
 
 // ---------------------------------------------------------------- cuteness dial
 
-dial.max = String(CUTENESS_COUNTS.length);
-dial.value = String(Math.min(DEFAULT_LEVEL, CUTENESS_COUNTS.length));
+dial.max = String(CUTENESS_CHANCES.length);
+dial.value = String(Math.min(DEFAULT_LEVEL, CUTENESS_CHANCES.length));
 function paintDial() {
   const min = Number(dial.min), max = Number(dial.max);
   dial.style.setProperty('--p', max > min ? (dial.value - min) / (max - min) : 1);
-  const n = currentCount();
-  dial.setAttribute('aria-valuetext', `Level ${dial.value}: ${n} emoticon${n === 1 ? '' : 's'} per sentence`);
+  const n = Math.round(1 / currentChance());
+  dial.setAttribute('aria-valuetext', `Level ${dial.value}: about one emoticon every ${n} words`);
 }
 dial.addEventListener('input', paintDial);
 paintDial();
@@ -154,7 +154,7 @@ function buildToneSelect(tags) {
     li.id = `tone-opt-${i}`;
     li.role = 'option';
     li.dataset.tag = tag;
-    li.textContent = tag;
+    li.textContent = titleCase(tag);
     li.addEventListener('mousedown', (e) => e.preventDefault());
     li.addEventListener('click', () => { setActive(i); toggleTag(tag); });
     li.addEventListener('mousemove', () => setActive(i));
@@ -174,6 +174,13 @@ function toggleTag(tag) {
     if (!selectedTags.length) selectedTags = [RANDOM];
   }
   renderTone();
+  retone();
+}
+
+/** A new tone re-rolls every emoticon already in the text, and the side columns with them. */
+function retone() {
+  applyToTextarea(retoneEdit(textarea.value, index, (n) => pickEmoticons(currentPool(), n)));
+  fillSides();
 }
 
 function renderTone() {
@@ -235,15 +242,14 @@ document.addEventListener('pointerdown', (e) => {
 
 // ---------------------------------------------------------------- decorative side columns
 
+/** Each column gets its own picks and its own ragged indents, so the two sides never mirror. */
 function fillSides() {
-  const all = emoticons.map((e) => e.text);
-  const picks = pickEmoticons(all, SIDE_LINES);
-  const indents = picks.map(() => [0, 0, 0, 1, 2, 3, 5][Math.floor(Math.random() * 7)]);
+  const pool = currentPool();
   for (const side of document.querySelectorAll('.side')) {
-    side.replaceChildren(...picks.map((text, i) => {
+    side.replaceChildren(...pickEmoticons(pool, SIDE_LINES).map((text) => {
       const p = document.createElement('p');
       p.textContent = text;
-      p.style.paddingLeft = `${indents[i]}em`;
+      p.style.paddingLeft = `${INDENTS[Math.floor(Math.random() * INDENTS.length)]}em`;
       return p;
     }));
   }

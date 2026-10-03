@@ -1,6 +1,6 @@
 # sparkle-sprinkler
 
-Type normally and the Sparkle Sprinkler adds text emoticons ⋆˚✿˖° to each sentence you finish.
+Type normally and the Sparkle Sprinkler sprinkles text emoticons ⋆˚✿˖° into your writing: every space you press is a chance for one to land.
 It's a static site (plain HTML/CSS/JS, no build step) that runs on GitHub Pages.
 
 ## Run locally
@@ -26,8 +26,8 @@ To start a new version, copy `v1/` to `v2/` and edit the copy. Only `data/` and 
 
 ## Tuning
 
-- **Cuteness**: `CUTENESS_COUNTS` at the top of `v1/app.js`. Slider level *i* adds `CUTENESS_COUNTS[i-1]` emoticons per sentence. The length of the array sets the number of slider levels.
-- **Abbreviations** that don't end a sentence: `ABBREVIATIONS` at the top of `v1/sprinkle.js`.
+- **Cuteness**: `CUTENESS_CHANCES` at the top of `v1/app.js`. Slider level *i* gives each space a `CUTENESS_CHANCES[i-1]` chance of getting an emoticon — 1 in 6 at the bottom up to 5 in 12 at the top, in even steps. The length of the array sets the number of slider levels.
+- **Side columns**: `SIDE_LINES` and `INDENTS` in `v1/app.js`. Each column is drawn independently from the selected tone's emoticons, and redrawn whenever the tone changes.
 
 ## Editing the emoticons
 

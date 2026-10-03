@@ -1,16 +1,5 @@
-// Pure logic for the Sparkle Sprinkler: CSV parsing, sentence detection, emoticon insertion.
+// Pure logic for the Sparkle Sprinkler: CSV parsing, emoticon lookup, insertion edits.
 // No DOM access here, so it runs under `node --test` too.
-
-// Tokens that end in "." without ending a sentence. Lowercase, without the final dot.
-export const ABBREVIATIONS = new Set([
-  'mr', 'mrs', 'ms', 'mx', 'dr', 'prof', 'st', 'sr', 'jr', 'mt', 'ave', 'blvd', 'rd',
-  'vs', 'etc', 'e.g', 'i.e', 'a.m', 'p.m', 'no', 'approx', 'dept', 'est', 'fig',
-  'inc', 'ltd', 'co', 'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept',
-  'oct', 'nov', 'dec', 'u.s', 'u.k',
-]);
-
-const TERMINATORS = '.!?…';
-const CLOSERS = '"\'”’)]»';
 
 const isSpace = (ch) => ch !== undefined && /\s/u.test(ch);
 const hasWordChar = (s) => /[\p{L}\p{N}]/u.test(s);
@@ -98,7 +87,7 @@ function boundaryChecker(text) {
   return (i) => i <= 0 || i >= text.length || segs.containing(i).index === i;
 }
 
-/** Index over known emoticon strings, longest first so "!!!"-style tails win over shorter matches. */
+/** Index over known emoticon strings, longest first so longer matches win over shorter ones. */
 export function makeIndex(emoticons) {
   const list = [...new Set(emoticons.map((e) => (typeof e === 'string' ? e : e.text)))]
     .filter(Boolean)
@@ -127,139 +116,8 @@ export function findEmoticons(text, index) {
 }
 
 const maskAt = (masks, i) => masks.find(([s, e]) => i >= s && i < e);
-const overlaps = (masks, s, e) => masks.some(([ms, me]) => ms < e && s < me);
-
-// ---------------------------------------------------------------- sentence boundaries
-
-/** If text just before `pos` is terminators + optional closers, return where they start. */
-function terminatorRunBefore(text, pos) {
-  let i = pos;
-  while (i > 0 && CLOSERS.includes(text[i - 1])) i--;
-  const termEnd = i;
-  while (i > 0 && TERMINATORS.includes(text[i - 1])) i--;
-  if (i === termEnd) return null;
-  return { termStart: i, termEnd };
-}
-
-/**
- * Whether the terminator run [termStart, termEnd) really ends a sentence.
- * `final` is true at Enter, end of paste and on Copy, where an ellipsis also counts.
- */
-function isSentenceEnd(text, termStart, termEnd, masks, final) {
-  if (overlaps(masks, termStart, termEnd)) return false; // part of an emoticon
-  const run = text.slice(termStart, termEnd);
-  if (!final && (run.includes('..') || run.includes('…'))) return false;
-  if (run === '.') {
-    let t = termStart;
-    while (t > 0 && !isSpace(text[t - 1])) t--;
-    const token = text.slice(t, termStart).replace(/^[^\p{L}\p{N}]+/u, '');
-    if (ABBREVIATIONS.has(token.toLowerCase())) return false;
-    if (/^\p{Lu}$/u.test(token) && token !== 'I') return false; // initials: "J. K. Rowling"
-  }
-  return true;
-}
-
-/** Start of the sentence ending at `end`, skipping leading whitespace and previous emoticons. */
-function sentenceStart(text, end, masks) {
-  let start = 0;
-  for (let i = end - 1; i >= 0; i--) {
-    const m = maskAt(masks, i);
-    if (m) { i = m[0]; continue; }
-    if (text[i] === '\n') { start = i + 1; break; }
-    if (isSpace(text[i]) && i > 0 && !isSpace(text[i - 1])) {
-      const run = terminatorRunBefore(text, i);
-      if (run && isSentenceEnd(text, run.termStart, run.termEnd, masks, false)) { start = i + 1; break; }
-    }
-  }
-  for (;;) {
-    while (start < end && isSpace(text[start])) start++;
-    const m = masks.find(([s]) => s === start);
-    if (!m || m[1] > end) break;
-    start = m[1];
-  }
-  return start;
-}
-
-function sentenceEndingAt(text, end, masks, { final, requireTerminator }) {
-  const run = terminatorRunBefore(text, end);
-  if (run) {
-    if (!isSentenceEnd(text, run.termStart, run.termEnd, masks, final)) return null;
-  } else if (requireTerminator) {
-    return null;
-  }
-  const start = sentenceStart(text, run ? run.termStart : end, masks);
-  const body = text.slice(start, run ? run.termStart : end);
-  if (!hasWordChar(body)) return null;
-  if (overlaps(masks, start, end)) return null; // already sprinkled
-  return { start, end };
-}
-
-/**
- * The user typed whitespace at `wsPos` (text[wsPos] is that whitespace).
- * Returns { start, end } of the sentence it confirms, or null.
- */
-export function sentenceBeforeSpace(text, wsPos, index) {
-  const masks = findEmoticons(text, index);
-  let after = wsPos + 1;
-  while (after < text.length && text[after] === ' ') after++;
-  if (masks.some(([s]) => s === after)) return null; // re-typed space before existing sprinkles
-  return sentenceEndingAt(text, wsPos, masks, { final: false, requireTerminator: true });
-}
-
-/** The user pressed Enter: text[nlPos] is the new line break. Punctuation is optional. */
-export function sentenceBeforeNewline(text, nlPos, index) {
-  const masks = findEmoticons(text, index);
-  let end = nlPos;
-  while (end > 0 && text[end - 1] !== '\n' && isSpace(text[end - 1])) end--;
-  return sentenceEndingAt(text, end, masks, { final: true, requireTerminator: false });
-}
-
-/** A terminated, unsprinkled final sentence at the very end of the text (flushed on Copy). */
-export function finalSentence(text, index) {
-  const masks = findEmoticons(text, index);
-  let end = text.length;
-  while (end > 0 && isSpace(text[end - 1])) end--;
-  return sentenceEndingAt(text, end, masks, { final: true, requireTerminator: true });
-}
-
-/** All complete sentences that end inside [from, to] (a paste), left to right, non-overlapping. */
-export function sentencesInRange(text, from, to, index) {
-  const masks = findEmoticons(text, index);
-  const out = [];
-  const push = (s) => {
-    if (s && (!out.length || s.start >= out[out.length - 1].end)) out.push(s);
-  };
-  for (let p = Math.max(from, 1); p <= to; p++) {
-    if (maskAt(masks, p - 1)) continue;
-    const atEnd = p === to;
-    if (p < text.length && text[p] === '\n') {
-      let end = p;
-      while (end > 0 && text[end - 1] !== '\n' && isSpace(text[end - 1])) end--;
-      push(sentenceEndingAt(text, end, masks, { final: true, requireTerminator: false }));
-    } else if (atEnd || (isSpace(text[p]) && !isSpace(text[p - 1]))) {
-      if (isSpace(text[p - 1])) continue;
-      push(sentenceEndingAt(text, p, masks, { final: atEnd, requireTerminator: true }));
-    }
-  }
-  return out;
-}
 
 // ---------------------------------------------------------------- sprinkling
-
-/**
- * Insertion points in a sentence: right after each token that is followed by whitespace
- * (so "word," stays together), plus the sentence end.
- */
-export function slotsFor(text, { start, end }, index) {
-  const masks = findEmoticons(text, index);
-  const isBoundary = boundaryChecker(text);
-  const slots = [];
-  for (let i = start + 1; i < end; i++) {
-    if (isSpace(text[i]) && !isSpace(text[i - 1]) && !maskAt(masks, i - 1) && isBoundary(i)) slots.push(i);
-  }
-  slots.push(end);
-  return slots;
-}
 
 /** `n` emoticons from `pool`, without repeats while the pool lasts. */
 export function pickEmoticons(pool, n, rng = Math.random) {
@@ -273,25 +131,48 @@ export function pickEmoticons(pool, n, rng = Math.random) {
 }
 
 /**
- * The edit that sprinkles `emoticons` into the sentence: spread over distinct random slots,
- * extras stacked at the end. Each emoticon is inserted as " " + emoticon.
+ * The edit that drops `emoticon` just before the space at `wsPos` (so it lands after the word
+ * that was finished), or null when that spot is not a good home for one: no word before it,
+ * an emoticon already there, or existing emoticons on either side.
  */
-export function sprinkleEdit(text, sentence, emoticons, index, rng = Math.random) {
-  const slots = slotsFor(text, sentence, index);
-  const chosen = new Map();
-  const free = [...slots];
-  for (const emo of emoticons) {
-    const slot = free.length ? free.splice(Math.floor(rng() * free.length), 1)[0] : sentence.end;
-    chosen.set(slot, [...(chosen.get(slot) ?? []), emo]);
+export function sprinkleAtSpace(text, wsPos, index, emoticon) {
+  if (!emoticon || !isSpace(text[wsPos])) return null;
+  if (wsPos === 0 || isSpace(text[wsPos - 1])) return null;
+
+  const masks = findEmoticons(text, index);
+  if (maskAt(masks, wsPos - 1)) return null; // the word just typed is an emoticon
+
+  let tokenStart = wsPos;
+  while (tokenStart > 0 && !isSpace(text[tokenStart - 1])) tokenStart--;
+  if (!hasWordChar(text.slice(tokenStart, wsPos))) return null;
+
+  let after = wsPos + 1;
+  while (after < text.length && text[after] === ' ') after++;
+  if (masks.some(([s]) => s === after)) return null; // an emoticon already follows
+
+  return { from: wsPos, to: wsPos, insert: ' ' + emoticon };
+}
+
+/** Candidate spaces inside [from, to) — one roll of the dice each. */
+export function spaceSlotsInRange(text, from, to) {
+  const out = [];
+  for (let p = Math.max(from, 1); p < Math.min(to, text.length); p++) {
+    if (text[p] === ' ') out.push(p);
   }
-  let out = '';
-  let last = sentence.start;
-  for (const slot of [...chosen.keys()].sort((a, b) => a - b)) {
-    out += text.slice(last, slot) + chosen.get(slot).map((e) => ' ' + e).join('');
-    last = slot;
-  }
-  out += text.slice(last, sentence.end);
-  return { from: sentence.start, to: sentence.end, insert: out };
+  return out;
+}
+
+/**
+ * Re-tone: swap every emoticon already in `text` for a fresh one. `pick(n)` returns n emoticons
+ * from the new pool. Returns one edit over the whole affected span, or null if there is nothing
+ * to swap.
+ */
+export function retoneEdit(text, index, pick) {
+  const ranges = findEmoticons(text, index);
+  if (!ranges.length) return null;
+  const picks = pick(ranges.length);
+  if (picks.length < ranges.length) return null;
+  return mergeEdits(text, ranges.map(([from, to], i) => ({ from, to, insert: picks[i] })));
 }
 
 /** Merge non-overlapping edits (sorted by position) into one edit over their span. */

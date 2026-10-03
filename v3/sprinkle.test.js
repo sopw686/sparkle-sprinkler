@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseCSV, loadEmoticons, allTags, poolFor, makeIndex, findEmoticons,
-  sentenceBeforeSpace, sentenceBeforeNewline, finalSentence, sentencesInRange,
-  slotsFor, pickEmoticons, sprinkleEdit, mergeEdits, applyEdit, mapPosition,
+  sprinkleAtSpace, spaceSlotsInRange, retoneEdit, pickEmoticons, mergeEdits, applyEdit, mapPosition,
 } from './sprinkle.js';
 
 const csv = readFileSync(new URL('../data/emoticons.csv', import.meta.url), 'utf8');
@@ -12,11 +11,11 @@ const EMOS = loadEmoticons(csv);
 const INDEX = makeIndex(EMOS);
 const seq = (...vals) => { let i = 0; return () => vals[i++ % vals.length]; };
 
-// Text typed so far + the whitespace just typed; returns the confirmed sentence text or null.
+// Text typed so far + the space just typed; returns the result of sprinkling "A", or null.
 function onSpace(before) {
   const text = before + ' ';
-  const s = sentenceBeforeSpace(text, before.length, INDEX);
-  return s && text.slice(s.start, s.end);
+  const edit = sprinkleAtSpace(text, before.length, INDEX, 'A');
+  return edit && applyEdit(text, edit);
 }
 
 test('parseCSV handles quotes, escaped quotes, commas, newlines, CRLF and BOM', () => {
@@ -34,96 +33,62 @@ test('real CSV: quoted emoticons with commas survive, tags are found', () => {
   assert.ok(texts.includes('ദ്ദി(｡•̀ ,<)~✩‧₊'));
   assert.ok(texts.includes('( ,,⩌\'︿\'⩌ꐦ,,)'));
   assert.ok(texts.includes('( •̀ ᴖ •́ )'), 'leading space trimmed');
-  for (const t of ['sparkle', 'flower', 'face', 'happy', 'love', 'sad', 'shy', 'angry']) {
-    assert.ok(allTags(EMOS).includes(t), t);
-  }
+  assert.deepEqual(allTags(EMOS), ['happy', 'love', 'shy', 'sad', 'angry'], 'emotion tags only');
   assert.equal(poolFor(EMOS, []).length, EMOS.length);
   assert.ok(poolFor(EMOS, ['sad', 'angry']).every((t) => EMOS.find((e) => e.text === t).tags.some((g) => g === 'sad' || g === 'angry')));
 });
 
-test('space after a terminator confirms a sentence', () => {
-  assert.equal(onSpace('Hi!'), 'Hi!');
-  assert.equal(onSpace('Hi! My name is Cheese.'), 'My name is Cheese.');
-  assert.equal(onSpace('Really?!'), 'Really?!');
-  assert.equal(onSpace('He said "go."'), 'He said "go."');
-  assert.equal(onSpace('(It was fun.)'), '(It was fun.)');
+test('a space after a word is a home for an emoticon', () => {
+  assert.equal(onSpace('hello'), 'hello A ');
+  assert.equal(onSpace('Hi there'), 'Hi there A ');
+  assert.equal(onSpace('Hi!'), 'Hi! A ');
+  assert.equal(onSpace('He said "go."'), 'He said "go." A ');
 });
 
-test('abbreviations, initials, ellipses and decimals do not end sentences', () => {
-  assert.equal(onSpace('I saw Dr.'), null);
-  assert.equal(onSpace('I saw Dr. Smith today.'), 'I saw Dr. Smith today.');
-  assert.equal(onSpace('We met J.'), null);
-  assert.equal(onSpace('We met J. K. Rowling.'), 'We met J. K. Rowling.');
-  assert.equal(onSpace('Wait...'), null);
-  assert.equal(onSpace('Wait… what?'), 'Wait… what?');
-  assert.equal(onSpace('Pi is 3.14 ok.'), 'Pi is 3.14 ok.');
-  assert.equal(onSpace('Fruit, e.g.'), null);
-  assert.equal(onSpace('Me and I.'), 'Me and I.');
+test('no emoticon where there is no word to follow', () => {
+  assert.equal(onSpace(''), null, 'leading space');
+  assert.equal(onSpace('hi '), null, 'second space in a row');
+  assert.equal(onSpace('hi\n'), null, 'start of a new line');
+  assert.equal(onSpace('--'), null, 'punctuation only');
+  assert.equal(sprinkleAtSpace('hello world', 5, INDEX, ''), null, 'empty pool');
+  assert.equal(sprinkleAtSpace('hello', 5, INDEX, 'A'), null, 'not a space');
 });
 
-test('terminators inside emoticons are ignored', () => {
-  assert.equal(onSpace('Hi (*´▽`*)❀.'), null);
-  assert.equal(onSpace('Ugh (｡•̀ ⤙ •́ ｡ꐦ) !!!'), null);
-  assert.equal(onSpace('Hi! (*´▽`*)❀. My name is Bob.'), 'My name is Bob.');
-  assert.equal(onSpace('Hi! ꒰ᐢ.   ̫ .ᐢ꒱ Bye.'), 'Bye.');
+test('emoticons are not stacked onto emoticons', () => {
+  assert.equal(onSpace('Hi (˶>⩊<˶)'), null, 'the word just typed is an emoticon');
+  assert.equal(sprinkleAtSpace('Hi (˶>⩊<˶) there', 2, INDEX, 'A'), null, 'an emoticon already follows');
+  assert.equal(sprinkleAtSpace('Hi  (˶>⩊<˶) there', 2, INDEX, 'A'), null, 'even across extra spaces');
+  assert.equal(applyEdit('Hi there (˶>⩊<˶)', sprinkleAtSpace('Hi there (˶>⩊<˶)', 2, INDEX, 'A')), 'Hi A there (˶>⩊<˶)');
 });
 
-test('already-sprinkled sentences are not sprinkled again', () => {
-  assert.equal(onSpace('Hi there (˶>⩊<˶) friend.'), null);
-  const text = 'Hi!  (˶>⩊<˶) Bye.';
-  assert.equal(sentenceBeforeSpace(text, 3, INDEX), null, 're-typed space before existing emoticon');
+test('an emoticon lands between the finished word and the space', () => {
+  const text = 'one two three';
+  const edit = sprinkleAtSpace(text, 3, INDEX, '(˶>⩊<˶)');
+  assert.equal(applyEdit(text, edit), 'one (˶>⩊<˶) two three');
+  assert.equal(mapPosition(4, edit), 12, 'caret after the space moves along');
+  assert.equal(mapPosition(3, edit), 3, 'caret before the space stays');
 });
 
-test('Enter ends a sentence even without punctuation, and after an ellipsis', () => {
-  const t1 = 'hello there\n';
-  assert.deepEqual(sentenceBeforeNewline(t1, 11, INDEX), { start: 0, end: 11 });
-  const t2 = 'First. so...\n';
-  assert.deepEqual(sentenceBeforeNewline(t2, 12, INDEX), { start: 7, end: 12 });
-  const t3 = 'Done! (˶>⩊<˶) \n';
-  assert.equal(sentenceBeforeNewline(t3, 14, INDEX), null, 'nothing new on that line');
-  assert.equal(sentenceBeforeNewline('\n', 0, INDEX), null);
+test('paste: every space in the pasted range is a candidate', () => {
+  const text = 'Pre one two\nthree four';
+  assert.deepEqual(spaceSlotsInRange(text, 4, text.length), [7, 17]);
+  assert.deepEqual(spaceSlotsInRange(text, 0, text.length), [3, 7, 17]);
+  assert.deepEqual(spaceSlotsInRange(text, 0, 0), []);
 });
 
-test('finalSentence flushes a terminated last sentence only', () => {
-  assert.deepEqual(finalSentence('One. Two!', INDEX), { start: 5, end: 9 });
-  assert.equal(finalSentence('One. Two', INDEX), null);
-  assert.equal(finalSentence('Dr.', INDEX), null);
-  assert.deepEqual(finalSentence('Hmm...  ', INDEX), { start: 0, end: 6 });
+test('retoneEdit swaps every emoticon in the text for a fresh one', () => {
+  const text = 'Hi (˶>⩊<˶) there TᴖT friend';
+  const edit = retoneEdit(text, INDEX, (n) => Array.from({ length: n }, (_, i) => `<${i}>`));
+  assert.equal(applyEdit(text, edit), 'Hi <0> there <1> friend');
+  assert.equal(retoneEdit('nothing to retone', INDEX, () => []), null);
+  assert.equal(retoneEdit(text, INDEX, () => []), null, 'an empty pool leaves the text alone');
 });
 
-test('pasted text: every complete sentence in range', () => {
-  const pasted = 'One. Dr. Who is here! Last line\nNext.';
-  const text = 'Pre ' + pasted;
-  const found = sentencesInRange(text, 4, text.length, INDEX).map((s) => text.slice(s.start, s.end));
-  assert.deepEqual(found, ['Pre One.', 'Dr. Who is here!', 'Last line', 'Next.']);
-});
-
-test('slots sit after tokens followed by whitespace, plus the end', () => {
-  const text = 'Angeles, CA is far.';
-  assert.deepEqual(slotsFor(text, { start: 0, end: text.length }, INDEX), [8, 11, 14, 19]);
-});
-
-test('sprinkleEdit spreads over distinct slots and stacks extras at the end', () => {
-  const text = 'Hi there.';
-  const s = { start: 0, end: 9 };
-  assert.equal(applyEdit(text, sprinkleEdit(text, s, ['A'], INDEX, seq(0))), 'Hi A there.');
-  assert.equal(applyEdit(text, sprinkleEdit(text, s, ['A', 'B', 'C', 'D'], INDEX, seq(0))), 'Hi A there. B C D');
-  assert.equal(applyEdit(text, sprinkleEdit(text, s, ['A'], INDEX, seq(0.99))), 'Hi there. A');
-});
-
-test('cursor mapping keeps the caret after the sprinkled sentence', () => {
-  const text = 'Hi! ';
-  const edit = sprinkleEdit(text, { start: 0, end: 3 }, ['(˶>⩊<˶)'], INDEX, seq(0));
-  const out = applyEdit(text, edit);
-  assert.equal(out, 'Hi! (˶>⩊<˶) ');
-  assert.equal(mapPosition(4, edit), out.length);
-  assert.equal(mapPosition(0, edit), 0);
-});
-
-test('mergeEdits combines paste edits into one', () => {
-  const text = 'A. B.';
-  const edits = [{ from: 0, to: 2, insert: 'A. x' }, { from: 3, to: 5, insert: 'B. y' }];
-  assert.equal(applyEdit(text, mergeEdits(text, edits)), 'A. x B. y');
+test('mergeEdits combines paste insertions into one', () => {
+  const text = 'one two three';
+  const edits = [3, 7].map((p) => sprinkleAtSpace(text, p, INDEX, 'A'));
+  assert.equal(applyEdit(text, mergeEdits(text, edits)), 'one A two A three');
+  assert.equal(mergeEdits(text, []), null);
 });
 
 test('pickEmoticons avoids repeats until the pool runs out', () => {
@@ -131,6 +96,7 @@ test('pickEmoticons avoids repeats until the pool runs out', () => {
   assert.equal(new Set(got).size, 3);
   assert.equal(pickEmoticons(['a'], 3).length, 3);
   assert.deepEqual(pickEmoticons([], 3), []);
+  assert.deepEqual(pickEmoticons(['a', 'b'], 1, seq(0.99)), ['b']);
 });
 
 test('findEmoticons respects grapheme boundaries', () => {
