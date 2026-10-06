@@ -6,7 +6,10 @@
   --blue: #9a35f0;
   --sky: #ffeef8;
   --hover: #f5b3dc;
-  --rainbow: linear-gradient(90deg, #e0102e, #e05a00, #b88700, #1fa022, #00958f, #2b55ff, #9a35f0, #de1a9c);
+  /* the screen-wide field; app.js swaps in a version with radial rings (see rainbow.js) */
+  --rainbow: linear-gradient(90deg, #e0102e, #e05a00, #b88700, #1fa022, #00958f, #2b55ff, #9a35f0, #de1a9c) 0 0 / 100% 100%;
+  /* the cuteness bar keeps its own full rainbow */
+  --rainbow-line: linear-gradient(90deg, #e0102e, #e05a00, #b88700, #1fa022, #00958f, #2b55ff, #9a35f0, #de1a9c);
   --violet: #de1a9c;
   --u: clamp(1px, 100vw / 960, 1.75px);
   color-scheme: light;
@@ -81,6 +84,41 @@ h1 .deco {
 .side p {
   margin: 0;
   white-space: nowrap;
+}
+
+/* sparkle flipbooks: every glyph in its own square cell so frames never jitter */
+.sparkle {
+  display: grid;
+  grid-template-columns: repeat(7, calc(18 * var(--u)));
+  grid-auto-rows: calc(18 * var(--u));
+  font-size: calc(22 * var(--u));
+  line-height: 1;
+  user-select: none;
+}
+
+/* top-left: in the header row, level with the title */
+.sparkle-top {
+  grid-area: 1 / 1;
+  align-self: center;
+  justify-self: start;
+  margin-left: calc(38 * var(--u));
+}
+
+/* bottom-right: the right column's lines give way so it always sits in the corner.
+   Lines that don't fit wrap into a second, clipped column instead of being cut in half. */
+.side-right { display: flex; flex-direction: column; overflow: visible; }
+.side-right .side-lines { flex: 1; min-height: 0; display: flex; flex-flow: column wrap; overflow: hidden; }
+.side-right .side-lines p { flex: none; width: 100%; }
+.sparkle-bottom {
+  flex: none;
+  align-self: flex-end;
+  margin: calc(10 * var(--u)) calc(30 * var(--u)) 0 0;
+}
+
+.sparkle span {
+  display: grid;
+  place-items: center;
+  transform: scale(var(--s, 1));
 }
 
 /* ---------- main column */
@@ -343,7 +381,7 @@ h1 .deco {
   }
   .masthead { padding: 16px 0 0; }
   h1 { white-space: normal; font-size: 32px; line-height: 1.3; }
-  .side { display: none; }
+  .side, .sparkle { display: none; }
   .controls {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 16px;
@@ -353,26 +391,37 @@ h1 .deco {
   .paper textarea { height: 260px; }
 }
 
-/* ---------- rainbow: text, borders, bar and box all share one gradient */
+/* ---------- rainbow: text, borders and box all sample one screen-fixed field, so colors line up across elements.
+   Fixed backgrounds are dropped on transformed elements, so nothing below that uses one is transformed. */
 
-h1, .intro, .side p, .label, .select-value, .select-list li, .copy, .status, .paper textarea {
+h1, .intro, .side p, .sparkle span, .label, .select-value, .select-list li, .copy, .status, .paper textarea {
   color: transparent;
   background: var(--rainbow) fixed;
   -webkit-background-clip: text;
   background-clip: text;
 }
 
+/* glyphs overhang their sparkle cells; grow the painted box so the gradient reaches them.
+   Scale with font-size, not transform, so the glyphs keep sampling the fixed field. */
+.sparkle span { margin: -0.5em; padding: 0.5em; transform: none; font-size: calc(var(--s, 1) * 1em); }
+
 .paper textarea { caret-color: var(--blue); }
 .paper textarea::placeholder { color: transparent; opacity: 0.6; }
 .paper textarea::selection { background: var(--blue); color: var(--pink); -webkit-text-fill-color: var(--pink); }
 
-.select-field, .select-list, .copy, .dial {
-  border-color: transparent;
-  border-image: var(--rainbow) 1;
-}
+/* borders: a transparent border shows the field through, under a solid fill clipped to the padding box */
+.select-field, .select-list, .copy, .select-arrow, .dial { border-color: transparent; }
 
-.select-arrow { border-left-color: var(--violet); }
-.select-arrow::after { background: var(--rainbow); }
+.select-field { background: linear-gradient(var(--pink), var(--pink)) padding-box, var(--rainbow) fixed border-box; }
+.select-list { background: linear-gradient(#fff, #fff) padding-box, var(--rainbow) fixed border-box; }
+.select-arrow { background: linear-gradient(var(--sky), var(--sky)) padding-box, var(--rainbow) fixed border-box; }
+
+.select-arrow::after {
+  inset: 0;
+  margin: auto;
+  transform: none;
+  background: var(--rainbow) fixed;
+}
 .select-list li[aria-selected="true"]::before { border-color: var(--violet); }
 
 .select-list li[aria-selected="true"] {
@@ -388,28 +437,36 @@ h1, .intro, .side p, .label, .select-value, .select-list li, .copy, .status, .pa
   background-clip: text, padding-box;
 }
 
+.copy {
+  background: var(--rainbow) fixed, linear-gradient(var(--pink), var(--pink)), var(--rainbow) fixed;
+  -webkit-background-clip: text, padding-box, border-box;
+  background-clip: text, padding-box, border-box;
+}
+
 .copy:hover {
-  background: var(--rainbow) fixed, var(--sky);
-  -webkit-background-clip: text, padding-box;
-  background-clip: text, padding-box;
+  background: var(--rainbow) fixed, linear-gradient(var(--sky), var(--sky)), var(--rainbow) fixed;
+  -webkit-background-clip: text, padding-box, border-box;
+  background-clip: text, padding-box, border-box;
 }
 
 .copy:active {
-  background: var(--rainbow);
+  background: var(--rainbow) fixed;
   -webkit-background-clip: border-box;
   background-clip: border-box;
   color: var(--pink);
 }
 
+/* the cuteness bar: its own full rainbow (border included), covered with pink past the thumb */
 .dial {
   background:
     linear-gradient(var(--pink), var(--pink)) 100% 0 /
-      calc(100% * (1 - var(--p))) 100% no-repeat,
-    var(--rainbow);
+      calc(100% * (1 - var(--p))) 100% no-repeat padding-box,
+    var(--rainbow-line) border-box;
 }
 
-.dial::-webkit-slider-thumb { background: conic-gradient(#e0102e, #e05a00, #b88700, #1fa022, #00958f, #2b55ff, #9a35f0, #de1a9c, #e0102e); }
-.dial::-moz-range-thumb { background: conic-gradient(#e0102e, #e05a00, #b88700, #1fa022, #00958f, #2b55ff, #9a35f0, #de1a9c, #e0102e); }
+/* app.js sets --thumb-color to the bar's color under the thumb */
+.dial::-webkit-slider-thumb { background: var(--thumb-color, var(--blue)); }
+.dial::-moz-range-thumb { background: var(--thumb-color, var(--blue)); }
 
 .paper {
   position: relative;
@@ -421,7 +478,7 @@ h1, .intro, .side p, .label, .select-value, .select-list li, .copy, .status, .pa
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--rainbow);
+  background: var(--rainbow) fixed;
   -webkit-mask:
     repeating-linear-gradient(90deg, #000 0 var(--dot), transparent 0 calc(var(--dot) + var(--gap))) top left / 100% var(--dot) no-repeat,
     repeating-linear-gradient(90deg, #000 0 var(--dot), transparent 0 calc(var(--dot) + var(--gap))) bottom left / 100% var(--dot) no-repeat,

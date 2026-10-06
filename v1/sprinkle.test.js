@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  parseCSV, loadEmoticons, allTags, poolFor, makeIndex, findEmoticons,
+  parseCSV, loadEmoticons, allTags, poolsFor, makeIndex, findEmoticons,
   sprinkleAtSpace, spaceSlotsInRange, retoneEdit, pickEmoticons, mergeEdits, applyEdit, mapPosition,
 } from './sprinkle.js';
 
@@ -25,7 +25,7 @@ test('parseCSV handles quotes, escaped quotes, commas, newlines, CRLF and BOM', 
 
 test('loadEmoticons reads every column but Name and Type as a tag column', () => {
   const emos = loadEmoticons('Emoticons,Name,Type,Emotion 1,Fourth\n" (x,y) ",n,Face,happy,LOVE\n"(x,y)",dup,face,sad,\n');
-  assert.deepEqual(emos, [{ text: '(x,y)', name: 'n', tags: ['happy', 'love', 'sad'] }]);
+  assert.deepEqual(emos, [{ text: '(x,y)', name: 'n', type: 'face', tags: ['happy', 'love', 'sad'] }]);
 });
 
 test('real CSV: quoted emoticons with commas survive, tags are found', () => {
@@ -34,8 +34,16 @@ test('real CSV: quoted emoticons with commas survive, tags are found', () => {
   assert.ok(texts.includes('( ,,⩌\'︿\'⩌ꐦ,,)'));
   assert.ok(texts.includes('( •̀ ᴖ •́ )'), 'leading space trimmed');
   assert.deepEqual(allTags(EMOS), ['happy', 'shy', 'sad', 'love', 'angry'], 'emotion tags only');
-  assert.equal(poolFor(EMOS, []).length, EMOS.length);
-  assert.ok(poolFor(EMOS, ['sad', 'angry']).every((t) => EMOS.find((e) => e.text === t).tags.some((g) => g === 'sad' || g === 'angry')));
+  assert.equal(poolsFor(EMOS, null).flat().length, EMOS.length);
+  assert.ok(poolsFor(EMOS, 'sad').flat().every((t) => EMOS.find((e) => e.text === t).tags.includes('sad')));
+});
+
+test('poolsFor splits a tone into one pool per type', () => {
+  const typeOf = (t) => EMOS.find((e) => e.text === t).type;
+  const pools = poolsFor(EMOS, 'sad');
+  assert.deepEqual(pools.map((p) => typeOf(p[0])).sort(), ['face', 'sparkle']);
+  for (const p of pools) assert.ok(p.every((t) => typeOf(t) === typeOf(p[0])));
+  assert.equal(poolsFor(EMOS, 'angry').length, 1, 'no empty sparkle pool');
 });
 
 test('a space after a word is a home for an emoticon', () => {
@@ -92,11 +100,20 @@ test('mergeEdits combines paste insertions into one', () => {
 });
 
 test('pickEmoticons avoids repeats until the pool runs out', () => {
-  const got = pickEmoticons(['a', 'b', 'c'], 3, Math.random);
+  const got = pickEmoticons([['a', 'b', 'c']], 3, Math.random);
   assert.equal(new Set(got).size, 3);
-  assert.equal(pickEmoticons(['a'], 3).length, 3);
+  assert.equal(pickEmoticons([['a']], 3).length, 3);
   assert.deepEqual(pickEmoticons([], 3), []);
-  assert.deepEqual(pickEmoticons(['a', 'b'], 1, seq(0.99)), ['b']);
+  assert.deepEqual(pickEmoticons([[], []], 3), []);
+  assert.deepEqual(pickEmoticons([['a', 'b']], 1, seq(0.99)), ['b']);
+});
+
+test('pickEmoticons chooses between pools with equal odds', () => {
+  assert.deepEqual(pickEmoticons([['f'], ['s1', 's2', 's3', 's4']], 2, seq(0.1, 0, 0.9, 0)), ['f', 's1']);
+  assert.deepEqual(pickEmoticons([[], ['s']], 2), ['s', 's'], 'empty pools are skipped');
+  const got = pickEmoticons([['f'], Array.from({ length: 50 }, (_, i) => `s${i}`)], 4000);
+  const faces = got.filter((t) => t === 'f').length;
+  assert.ok(faces > 1700 && faces < 2300, `about half faces, got ${faces}`);
 });
 
 test('findEmoticons respects grapheme boundaries', () => {

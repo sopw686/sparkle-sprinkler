@@ -1,13 +1,16 @@
 import {
-  loadEmoticons, allTags, poolFor, makeIndex, pickEmoticons,
+  loadEmoticons, allTags, poolsFor, makeIndex, pickEmoticons,
   sprinkleAtSpace, spaceSlotsInRange, retoneEdit, mergeEdits, mapPosition,
 } from './sprinkle.js';
+import { FRAMES, FRAMES_ALT, COLS, ROWS, frameCells } from './twinkle.js';
+import { lineColor, ringColor, fieldT } from './rainbow.js';
 
 // Chance that pressing space adds an emoticon, per cuteness level (slider position 1..length):
 // 1 in 4 at the low end up to 5 in 12 at the top, in even steps.
 const CUTENESS_CHANCES = [6 / 24, 7 / 24, 8 / 24, 9 / 24, 10 / 24];
 const DEFAULT_LEVEL = 3;
 const RANDOM = 'random';
+const HIDDEN_TAGS = ['love'];
 const SIDE_LINES_MIN = 5;
 const SIDE_LINES_MAX = 22;
 const INDENTS = [0, 0, 0, 1, 2, 3, 5];
@@ -23,7 +26,7 @@ let currentFontIndex = 0;
 
 let emoticons = [];
 let index = makeIndex([]);
-let selectedTags = [RANDOM];
+let selectedTag = RANDOM;
 let busy = false;
 let pasteStart = null;
 
@@ -40,14 +43,14 @@ async function init() {
     return;
   }
   index = makeIndex(emoticons);
-  buildToneSelect([RANDOM, ...allTags(emoticons)]);
+  buildToneSelect([RANDOM, ...allTags(emoticons).filter((t) => !HIDDEN_TAGS.includes(t))]);
   fillSides();
 }
 
 // ---------------------------------------------------------------- sprinkling
 
-function currentPool() {
-  return poolFor(emoticons, selectedTags.includes(RANDOM) ? [] : selectedTags);
+function currentPools() {
+  return poolsFor(emoticons, selectedTag === RANDOM ? null : selectedTag);
 }
 
 function currentChance() {
@@ -94,6 +97,7 @@ textarea.addEventListener('beforeinput', (e) => {
 });
 
 textarea.addEventListener('input', (e) => {
+  if (!busy && e.inputType.startsWith('insert')) sparkles.forEach((advance) => advance());
   if (busy || e.isComposing || !emoticons.length) return;
   const text = textarea.value;
   const caret = textarea.selectionStart;
@@ -102,12 +106,12 @@ textarea.addEventListener('input', (e) => {
   let edit = null;
   if (e.inputType === 'insertText' && text[caret - 1] === ' ') {
     if (rollForEmoticon()) {
-      const [emo] = pickEmoticons(currentPool(), 1);
+      const [emo] = pickEmoticons(currentPools(), 1);
       edit = sprinkleAtSpace(text, caret - 1, index, emo);
     }
   } else if ((e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') && pasteStart !== null) {
     const spots = spaceSlotsInRange(text, pasteStart, caret).filter(rollForEmoticon);
-    const picks = pickEmoticons(currentPool(), spots.length);
+    const picks = pickEmoticons(currentPools(), spots.length);
     edit = mergeEdits(text, spots
       .map((p, i) => sprinkleAtSpace(text, p, index, picks[i]))
       .filter(Boolean));
@@ -148,7 +152,11 @@ dial.max = String(CUTENESS_CHANCES.length);
 dial.value = String(Math.min(DEFAULT_LEVEL, CUTENESS_CHANCES.length));
 function paintDial() {
   const min = Number(dial.min), max = Number(dial.max);
-  dial.style.setProperty('--p', max > min ? (dial.value - min) / (max - min) : 1);
+  const p = max > min ? (dial.value - min) / (max - min) : 1;
+  dial.style.setProperty('--p', p);
+  // the thumb sits on the fill's edge; give it the bar's rainbow color right there
+  const edge = dial.offsetWidth ? (dial.clientLeft + p * dial.clientWidth) / dial.offsetWidth : p;
+  dial.style.setProperty('--thumb-color', `rgb(${lineColor(edge).join(' ')})`);
   const n = Math.round(1 / currentChance());
   dial.setAttribute('aria-valuetext', `Level ${dial.value}: about one emoticon every ${n} words`);
 }
@@ -158,7 +166,50 @@ dial.addEventListener('input', () => {
 });
 paintDial();
 
-// ---------------------------------------------------------------- tone select (multi-select listbox)
+// ---------------------------------------------------------------- rainbow field (shared by every rainbow on the page)
+
+const FIELD_SCALE = 4;
+let fieldUrl = null;
+let fieldFrame = 0;
+
+function paintField() {
+  const w = window.innerWidth, h = window.innerHeight;
+  const cw = Math.ceil(w / FIELD_SCALE), ch = Math.ceil(h / FIELD_SCALE);
+  const canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(cw, ch);
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const [r, g, b] = ringColor(fieldT((x + 0.5) * FIELD_SCALE, (y + 0.5) * FIELD_SCALE, w, h));
+      const i = (y * cw + x) * 4;
+      img.data[i] = r;
+      img.data[i + 1] = g;
+      img.data[i + 2] = b;
+      img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    document.documentElement.style.setProperty('--rainbow', `url("${url}") 0 0 / 100% 100%`);
+    if (fieldUrl) URL.revokeObjectURL(fieldUrl);
+    fieldUrl = url;
+  });
+}
+
+window.addEventListener('resize', () => {
+  cancelAnimationFrame(fieldFrame);
+  fieldFrame = requestAnimationFrame(() => {
+    paintField();
+    paintDial();
+  });
+});
+paintField();
+
+// ---------------------------------------------------------------- tone select (single-select listbox)
 
 const toneButton = document.getElementById('tone-button');
 const toneValue = document.getElementById('tone-value');
@@ -175,7 +226,7 @@ function buildToneSelect(tags) {
     li.dataset.tag = tag;
     li.textContent = titleCase(tag);
     li.addEventListener('mousedown', (e) => e.preventDefault());
-    li.addEventListener('click', () => { setActive(i); toggleTag(tag); });
+    li.addEventListener('click', () => { setActive(i); selectTag(tag); });
     li.addEventListener('mousemove', () => setActive(i));
     return li;
   }));
@@ -184,29 +235,23 @@ function buildToneSelect(tags) {
 
 function options() { return [...toneList.children]; }
 
-function toggleTag(tag) {
-  if (tag === RANDOM) {
-    selectedTags = [RANDOM];
-  } else {
-    const rest = selectedTags.filter((t) => t !== RANDOM);
-    selectedTags = rest.includes(tag) ? rest.filter((t) => t !== tag) : [...rest, tag];
-    if (!selectedTags.length) selectedTags = [RANDOM];
-  }
+function selectTag(tag) {
+  closeList();
+  if (tag === selectedTag) return;
+  selectedTag = tag;
   renderTone();
   retone();
 }
 
 /** A new tone re-rolls every emoticon already in the text, and the side columns with them. */
 function retone() {
-  applyToTextarea(retoneEdit(textarea.value, index, (n) => pickEmoticons(currentPool(), n)));
+  applyToTextarea(retoneEdit(textarea.value, index, (n) => pickEmoticons(currentPools(), n)));
   fillSides();
 }
 
 function renderTone() {
-  for (const li of options()) li.setAttribute('aria-selected', String(selectedTags.includes(li.dataset.tag)));
-  const order = options().map((li) => li.dataset.tag);
-  const shown = [...selectedTags].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-  toneValue.textContent = shown.length ? shown.map(titleCase).join(', ') : 'Select…';
+  for (const li of options()) li.setAttribute('aria-selected', String(li.dataset.tag === selectedTag));
+  toneValue.textContent = titleCase(selectedTag);
 }
 
 function setActive(i) {
@@ -221,7 +266,7 @@ function openList() {
   if (!toneList.hidden) return;
   toneList.hidden = false;
   toneButton.setAttribute('aria-expanded', 'true');
-  const first = options().findIndex((li) => selectedTags.includes(li.dataset.tag));
+  const first = options().findIndex((li) => li.dataset.tag === selectedTag);
   setActive(Math.max(first, 0));
   toneList.focus();
 }
@@ -247,7 +292,7 @@ toneList.addEventListener('keydown', (e) => {
     case 'Home': e.preventDefault(); setActive(0); break;
     case 'End': e.preventDefault(); setActive(opts.length - 1); break;
     case ' ':
-    case 'Enter': e.preventDefault(); toggleTag(opts[activeIndex].dataset.tag); break;
+    case 'Enter': e.preventDefault(); selectTag(opts[activeIndex].dataset.tag); break;
     case 'Escape': e.preventDefault(); closeList(); break;
     case 'Tab': closeList(false); break;
   }
@@ -263,10 +308,10 @@ document.addEventListener('pointerdown', (e) => {
 
 /** Each column gets its own picks and its own ragged indents, so the two sides never mirror. */
 function fillSides() {
-  const pool = currentPool();
+  const pools = currentPools();
   const count = currentSideLines();
-  for (const side of document.querySelectorAll('.side')) {
-    side.replaceChildren(...pickEmoticons(pool, count).map((text) => {
+  for (const side of document.querySelectorAll('.side-lines')) {
+    side.replaceChildren(...pickEmoticons(pools, count).map((text) => {
       const p = document.createElement('p');
       p.textContent = text;
       p.style.paddingLeft = `${INDENTS[Math.floor(Math.random() * INDENTS.length)]}em`;
@@ -274,5 +319,29 @@ function fillSides() {
     }));
   }
 }
+
+// ---------------------------------------------------------------- sparkle flipbooks (one frame per typed character)
+
+/** Fill `el` with a COLS × ROWS grid of cells; returns a function that steps to the next frame. */
+function makeSparkle(el, frames) {
+  const cells = Array.from({ length: COLS * ROWS }, () => document.createElement('span'));
+  el.replaceChildren(...cells);
+  let frame = 0;
+  const draw = () => frameCells(frames[frame]).forEach(({ ch, scale, opacity }, i) => {
+    cells[i].textContent = ch;
+    cells[i].style.setProperty('--s', scale);
+    cells[i].style.opacity = opacity;
+  });
+  draw();
+  return () => {
+    frame = (frame + 1) % frames.length;
+    draw();
+  };
+}
+
+const sparkles = [
+  makeSparkle(document.getElementById('sparkle-top'), FRAMES),
+  makeSparkle(document.getElementById('sparkle-bottom'), FRAMES_ALT),
+];
 
 init();

@@ -39,9 +39,9 @@ export function parseCSV(text) {
 }
 
 /**
- * Rows → [{ text, name, tags: string[] }]. The "Emoticons" column is the emoticon, "Name" and
- * "Type" are optional bookkeeping, and every other column is a tag column (so only the emotion
- * columns become tones). Duplicate emoticons are merged.
+ * Rows → [{ text, name, type, tags: string[] }]. The "Emoticons" column is the emoticon, "Name"
+ * is optional bookkeeping, "Type" (face, sparkle, ...) is optional, and every other column is a
+ * tag column (so only the emotion columns become tones). Duplicate emoticons are merged.
  */
 export function loadEmoticons(csvText) {
   const [header, ...rows] = parseCSV(csvText);
@@ -49,7 +49,8 @@ export function loadEmoticons(csvText) {
   const emoCol = cols.findIndex((c) => c === 'emoticons' || c === 'emoticon');
   if (emoCol < 0) throw new Error('CSV has no "Emoticons" column');
   const nameCol = cols.indexOf('name');
-  const skip = new Set([emoCol, nameCol, cols.indexOf('type')]);
+  const typeCol = cols.indexOf('type');
+  const skip = new Set([emoCol, nameCol, typeCol]);
   const tagCols = cols.map((_, i) => i).filter((i) => !skip.has(i));
 
   const byText = new Map();
@@ -61,7 +62,12 @@ export function loadEmoticons(csvText) {
     if (existing) {
       for (const t of tags) if (!existing.tags.includes(t)) existing.tags.push(t);
     } else {
-      byText.set(text, { text, name: nameCol >= 0 ? (r[nameCol] ?? '').trim() : '', tags });
+      byText.set(text, {
+        text,
+        name: nameCol >= 0 ? (r[nameCol] ?? '').trim() : '',
+        type: typeCol >= 0 ? (r[typeCol] ?? '').trim().toLowerCase() : '',
+        tags,
+      });
     }
   }
   return [...byText.values()];
@@ -74,10 +80,18 @@ export function allTags(emoticons) {
   return seen;
 }
 
-/** Emoticons that carry any of `tags`; an empty list means every emoticon ("random"). */
-export function poolFor(emoticons, tags) {
-  if (!tags.length) return emoticons.map((e) => e.text);
-  return emoticons.filter((e) => e.tags.some((t) => tags.includes(t))).map((e) => e.text);
+/**
+ * Emoticons that carry `tag` (null means every emoticon, "random"), split into one pool per type
+ * in first-seen order. Types with nothing in them are left out.
+ */
+export function poolsFor(emoticons, tag) {
+  const byType = new Map();
+  for (const e of emoticons) {
+    if (tag && !e.tags.includes(tag)) continue;
+    if (!byType.has(e.type)) byType.set(e.type, []);
+    byType.get(e.type).push(e.text);
+  }
+  return [...byType.values()];
 }
 
 // ---------------------------------------------------------------- graphemes & known emoticons
@@ -121,13 +135,18 @@ const maskAt = (masks, i) => masks.find(([s, e]) => i >= s && i < e);
 
 // ---------------------------------------------------------------- sprinkling
 
-/** `n` emoticons from `pool`, without repeats while the pool lasts. */
-export function pickEmoticons(pool, n, rng = Math.random) {
+/**
+ * `n` emoticons from `pools`. Each pick first chooses a pool with equal odds (so with faces and
+ * sparkles it is 50/50), then an emoticon from it, without repeats while that pool lasts.
+ */
+export function pickEmoticons(pools, n, rng = Math.random) {
+  const live = pools.filter((p) => p.length);
+  const bags = live.map(() => []);
   const out = [];
-  let bag = [];
-  while (out.length < n && pool.length) {
-    if (!bag.length) bag = [...pool];
-    out.push(bag.splice(Math.floor(rng() * bag.length), 1)[0]);
+  while (out.length < n && live.length) {
+    const g = Math.floor(rng() * live.length);
+    if (!bags[g].length) bags[g] = [...live[g]];
+    out.push(bags[g].splice(Math.floor(rng() * bags[g].length), 1)[0]);
   }
   return out;
 }
