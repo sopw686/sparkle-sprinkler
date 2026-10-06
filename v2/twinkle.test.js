@@ -26,3 +26,10 @@ test('frameCells flattens to one cell per grid square and scales only the center
   assert.deepEqual(cells[2 * COLS + 3], { ch: '⋆', scale: 2, opacity: 0.5 });
   assert.deepEqual(cells[0], { ch: '', scale: 1, opacity: 0.5 });
 });
+
+test('frameCells enlarges the extra cells listed in scale', () => {
+  const cells = frameCells({ rows: FRAMES_ALT[0].rows, center: 2, scale: [[0, 6, 1.5]] });
+  assert.equal(cells[3 + 2 * COLS].scale, 2);
+  assert.equal(cells[6].scale, 1.5);
+  assert.equal(cells[5].scale, 1);
+});
